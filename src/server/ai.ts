@@ -1,11 +1,10 @@
 "use server";
 
-import { gateway } from "@ai-sdk/gateway";
 import { put } from "@vercel/blob";
 import { generateObject, generateText } from "ai";
+import { redirect } from "next/navigation";
 import z from "zod";
-import { db } from "@/db/db";
-import { creatures } from "@/db/schema";
+import { saveCreature } from "@/server/creatures";
 
 const fetchGithubStats = async (username: string) => {
   const response = await fetch(
@@ -141,47 +140,44 @@ const generateCreatureImage = async (
 };
 
 const submitGithubForm = async (githubProfileUrl: string) => {
-  const username = githubProfileUrl.split("/").pop() ?? "";
-  const stats = await fetchGithubStats(username);
-  const description = await generateCreatureDescription(stats.total_count);
-  const image = await generateCreatureImage(
-    description.imagePrompt,
-    stats.total_count,
-  );
-  console.log(description, image);
+  try {
+    const username = githubProfileUrl.split("/").pop() ?? "";
+    const stats = await fetchGithubStats(username);
+    const description = await generateCreatureDescription(stats.total_count);
+    const image = await generateCreatureImage(
+      description.imagePrompt,
+      stats.total_count,
+    );
+    console.log(description, image);
 
-  for (const result of image.content) {
-    if (result.type === "file") {
-      const blob = await put(
-        `${username}-${Date.now()}.png`,
-        Buffer.from(result.file.uint8Array),
-        {
-          access: "public",
-        },
-      );
-      console.log(blob.url);
-      return blob;
+    for (const result of image.content) {
+      if (result.type === "file") {
+        const blob = await put(
+          `${username}-${Date.now()}.png`,
+          Buffer.from(result.file.uint8Array),
+          {
+            access: "public",
+          },
+        );
+        const creature = await saveCreature({
+          githubProfileUrl,
+          contributions: stats.total_count,
+          name: description.name,
+          description: description.description,
+          image: blob.url,
+        });
+        redirect(`/creature/${creature?.id}`);
+      }
     }
+  } catch (error) {
+    console.error(error);
+    throw error;
   }
-
-  // const creature = await saveCreature(githubProfileUrl, stats.total_count, description, image, stats.total_count);
-  // return creature;
 };
-
-// const saveCreature = async (githubProfileUrl: string, contributions: number, description: string, image: string) => {
-//   const creature = await db.insert(creatures).values({
-//     githubProfileUrl,
-//     contributions,
-//     description,
-//     image,
-//   });
-//   return creature;
-// }
 
 export {
   fetchGithubStats,
   generateCreatureImage,
   generateCreatureDescription,
-  // saveCreature,
   submitGithubForm,
 };

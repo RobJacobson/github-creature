@@ -1,0 +1,1 @@
+ALTER TABLE "creatures" ALTER COLUMN "name" SET DEFAULT 'Unknown Creature';

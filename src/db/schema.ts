@@ -3,6 +3,7 @@ import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 export const creatures = pgTable("creatures", {
   id: uuid("id").primaryKey().defaultRandom(),
   githubProfileUrl: text("github_profile_url").notNull(),
+  name: text("name").notNull().default("Unknown Creature"),
   description: text("description").notNull(),
   image: text("image").notNull(),
   contributions: integer("contributions").notNull(),
